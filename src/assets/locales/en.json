@@ -28,5 +28,6 @@
     "card_image": "Card image",
     "deck_image": "Deck image",
     "deck_image_squirrel": "Deck image squirrel",
-    "scale": "Scale"
+    "scale": "Scale",
+    "drag_not_allowed_alert": "Please, buy a card or a squirrel!"
 }

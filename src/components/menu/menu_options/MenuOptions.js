@@ -2,7 +2,7 @@
 import "./MenuOptions.css";
 
 // react
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 // images
 import continueText from '../../../assets/images/menu/texts/continue.png';
@@ -26,15 +26,15 @@ const Menu = () => {
     const [isFadingOut, setIsFadingOut] = useState(false);
     const [clickedCard, setClickedCard] = useState(false);
     const [startedDrag, setStartedDrag] = useState(null);
+    const [animatedCards, setAnimatedCards] = useState([]);
     const { t } = useTranslation();
 
-    // This functions handle the action of the start of the dragging of a card.
+    // Funções de drag-and-drop
     const handleDragStart = () => {
         setClickedCard(true);
         setStartedDrag(true);
     }
-    
-    // This functions handle the action of the end of the dragging of a card.
+
     const handleDragEnd = (result) => {
         setClickedCard(false);
         setStartedDrag(false);
@@ -45,7 +45,7 @@ const Menu = () => {
         }
     }
 
-    // This function gives all the information of the menu cards that are needed to render afterwards.
+    // Dados das cartas
     const cardData = {
         new_game: {
             id: "menu_new_game_draggable",
@@ -70,7 +70,7 @@ const Menu = () => {
         }
     }
 
-    // This function constructs the props that will be used to make the draggable cards.
+    // Geração de props para as cartas
     const generateDraggableCardProps = (card, name, isOnTop) => {
         return {
             id: card.id,
@@ -85,43 +85,74 @@ const Menu = () => {
             isOnTop: isOnTop,
             setIsGlitchy: setIsGlitchy,
             setIsFadingOut: setIsFadingOut
-        }
+        };
     }
 
-    // This function is the one responsible to make all the cards in the menu.
+    // Geração das cartas
     const generateCard = (cardKey = [], isOnTop) => {
         return cardKey.map((name) => {
             const props = generateDraggableCardProps(cardData[name], name, isOnTop);
-            return (<DraggableCardMenu key={props.id} className="menu_cards" props={props}/>);
-        })
+            return (<DraggableCardMenu key={props.id} className="menu_cards" props={props} />);
+        });
     }
 
-    // This function is responsible for making the switch to know which card has to be shown in the cards from below.
-    const switchGenerateCardFromBelow = () => {
+    // Cartas abaixo
+    const switchGenerateCardFromBelow = useCallback(() => {
         switch (parent) {
             case "menu_continue_draggable":
-                return generateCard(["new_game", "options", "quit"]);
+                return ["new_game", "options", "quit"];
             case "menu_options_draggable":
-                return generateCard(["new_game", "continue", "quit"]);
+                return ["new_game", "continue", "quit"];
             case "menu_new_game_draggable":
-                return generateCard(["continue", "options", "quit"]);
+                return ["continue", "options", "quit"];
             case "menu_quit_draggable":
-                return generateCard(["new_game", "continue", "options"]);
+                return ["new_game", "continue", "options"];
             default:
-                return generateCard(["new_game", "continue", "options", "quit"]);
+                return ["new_game", "continue", "options", "quit"];
         }
-    }
+    }, [parent]); // Memoizar com base em `parent`
 
-    // This is the function responsible for updating the cards from below.
     const cardsFromBelow = () => {
-        return switchGenerateCardFromBelow().map((card, index) => (
-            <div className="menu_card" key={index}>
-                {card}
-            </div>
-        ))
+        const cardKeys = switchGenerateCardFromBelow();
+        return cardKeys.map((name) => {
+            const isAnimated = animatedCards.includes(name);
+            return (
+                <div className={`menu_card ${!isAnimated ? "menu_card_initial" : "menu_card_animate"}`}
+                    key={name}>
+                    {generateCard([name])}
+                </div>
+            );
+        });
     }
 
-    // This is the function responsible for updating the card chosen.
+    // UseEffect para animar as cartas
+    useEffect(() => {
+        const cardKeys = switchGenerateCardFromBelow();
+        const timeoutIds = cardKeys.map((name, index) => {
+            if (!animatedCards.includes(name)) {
+                // Delay progressivo com intervalo fixo
+                const delay = 200 + 150 * index; 
+                return setTimeout(() => {
+                    setAnimatedCards((prev) => {
+                        if (!prev.includes(name)) {
+                            return [...prev, name];
+                        }
+                        return prev;
+                    });
+                }, delay);
+            }
+            return null;
+        });
+
+        // Limpar timeouts ao desmontar o componente
+        return () => {
+            timeoutIds.forEach((timeoutId) => {
+                if (timeoutId) clearTimeout(timeoutId);
+            });
+        };
+    }, [parent, animatedCards, switchGenerateCardFromBelow]);
+
+    // Carta no centro
     const cardCenter = () => {
         if (parent) {
             const cardKey = parent.replace("menu_", "").replace("_draggable", "");
@@ -131,27 +162,11 @@ const Menu = () => {
         return null;
     }
 
-    // This is the function that animates the cards entering from the right.
-    const animateCards = () => {
-        const menuCards = document.querySelectorAll(".menu_card");
-        menuCards.forEach((card, index) => {
-            setTimeout(() => {
-                card.classList.add("menu_card_animate");
-                card.classList.remove("menu_card");
-            }, 500 * index);
-        });
-    }
-
-    // This function calls the animation cards function to animate the cards every time a card comes back from the center.
-    useEffect(() => {
-        animateCards();
-    }, [parent])
-
     return (<>
-        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} >
+        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="menu_container">
                 <div className="menu_header">
-                    {textSelected && <img className="menu_card_text_selected" src={textSelected} alt={t('text_selected')}/>}
+                    {textSelected && <img className="menu_card_text_selected" src={textSelected} alt={t('text_selected')} />}
                 </div>
                 <div className="menu_body_container">
                     <div className="menu_body">
@@ -163,11 +178,11 @@ const Menu = () => {
                 <div className="menu_footer">
                     {cardsFromBelow()}
                 </div>
-                {isGlitchy && <img className="menu_card_new_game_image_glitch" src={backgroundGlitch} alt={t('background_glitch')}/>}
-                {isFadingOut && <div className="menu_card_fade_out"/>}
+                {isGlitchy && <img className="menu_card_new_game_image_glitch" src={backgroundGlitch} alt={t('background_glitch')} />}
+                {isFadingOut && <div className="menu_card_fade_out" />}
             </div>
         </DndContext>
     </>);
-}
+};
 
 export default Menu;

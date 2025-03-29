@@ -27,5 +27,6 @@
     "card_image": "Imagem de Card",
     "deck_image": "Imagem do Deck",
     "deck_image_squirrel": "Imagem do Deck de Esquilo",
-    "scale": "Balança"
+    "scale": "Balança",
+    "drag_not_allowed_alert": "Por favor, compre uma carta ou um esquilo!"
 }

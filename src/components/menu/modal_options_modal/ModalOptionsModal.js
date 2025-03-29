@@ -2,7 +2,7 @@
 import "./ModalOptionsModal.css"
 
 // react
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 // images
 import languageText from '../../../assets/images/menu/texts/language.png';
@@ -26,8 +26,11 @@ import { Modal } from "react-bootstrap";
 import Cookies from "js-cookie";
 
 function ModalOptionsModal({ show }) {
-    const languageOptions = ['en', 'pt'];
-    const [selectedOption, setSelectedOption] = useState(Cookies.get('lan') === 'pt' ? 1 : 0);
+    const languageOptions = useMemo(() => ['en', 'pt'], []);
+    const [selectedOption, setSelectedOption] = useState(() => {
+        const savedLanguage = Cookies.get('lan');
+        return savedLanguage === 'pt' ? 1 : 0;
+    });
     const [languageChosen, setLanguageChosen] = useState(languageOptions[selectedOption]);
     const [volumeChosen, setVolumeChosen] = useState(6);
     const { volume, setVolume } = useAudio();
@@ -38,17 +41,21 @@ function ModalOptionsModal({ show }) {
     }, [selectedOption, languageOptions]);
 
     // This function returns the images that serve to show the level of volume the game is set in.
-    const volumeOptions = () => {
+    const volumeOptions = useCallback(() => {
         return [...Array(6)].map((_, i) => (
-            <img className="modal_options_modal_volume_icon" key={i} src={volumeChosen > i ? volumeOptionEnable : volumeOptionDisable} alt={t('volume_option') + ' ' + i} />
+            <img className="modal_options_modal_volume_icon"
+            key={i} src={volumeChosen > i ? volumeOptionEnable : volumeOptionDisable}
+            alt={t('volume_option') + ' ' + i} />
         ));
-    };
+    }, [volumeChosen, t])
 
     // This function is responsible by handling with the events when the language is changed.
-    const handleChangeLanguage = (e, isPlus) => {
+    const handleChangeLanguage = useCallback((e, isPlus) => {
         e.preventDefault();
         let newSelectedOption;
-        newSelectedOption = isPlus ? (selectedOption < languageOptions.length - 1 ? selectedOption + 1 : 0) : (selectedOption > 0 ? selectedOption - 1 : languageOptions.length - 1);
+        newSelectedOption = isPlus
+            ? (selectedOption < languageOptions.length - 1 ? selectedOption + 1 : 0)
+            : (selectedOption > 0 ? selectedOption - 1 : languageOptions.length - 1);
         setSelectedOption(newSelectedOption);
         const newLanguage = languageOptions[newSelectedOption];
         Cookies.set('lan', newLanguage);
@@ -57,10 +64,10 @@ function ModalOptionsModal({ show }) {
         setTimeout(() => {
             e.target.src = arrowEnable;
         }, 100);
-    };
+    }, [selectedOption, languageOptions, i18n])
 
     // This function is responsible by handling with the events when the master volume is changed.
-    const handleChangeMainVolume = (e, isPlus) => {
+    const handleChangeMainVolume = useCallback((e, isPlus) => {
         const extremeVolume = isPlus ? 100 : 0;
         const sumOrSubtraction = isPlus ? (volume + (100 / 6)) : (volume - (100 / 6));
         if ((sumOrSubtraction < extremeVolume && isPlus) || (sumOrSubtraction > extremeVolume && !isPlus)) {
@@ -73,7 +80,7 @@ function ModalOptionsModal({ show }) {
         setTimeout(() => {
             e.target.src = (isPlus ? plusEnable : minusEnable);
         }, 100);
-    };
+    }, [volume, volumeChosen, setVolume])
 
     return (
         <Modal className="modal_options_modal_container" contentClassName="modal_options_container_dialog" id="modal_options_modal_container" size="lg" show={show} aria-labelledby="contained-modal-title-vcenter" backdrop={false} centered>

@@ -2,7 +2,7 @@
 import './MainTitle.css';
 
 // react
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // images
@@ -30,14 +30,14 @@ const Title = ({setIsInTitleScreen, audioRef}) => {
     const { t } = useTranslation();
 
     // This function play the 'rattle' sound when pressed any button.
-    const playClickSound = () => {
+    const playClickSound = useCallback(() => {
         if (isFirstAction.current) {
             const audio = new Audio(titleRattle);
             audio.volume = volume / 100;
             audio.play();
             isFirstAction.current = false;
         }
-    }
+    }, [isFirstAction, volume])
 
     // This use effect was made to handle when the user presses a key, calling a click sound function and doing a animation with the title.
     useEffect(() => {
@@ -64,7 +64,7 @@ const Title = ({setIsInTitleScreen, audioRef}) => {
             document.removeEventListener('click', handleUserAction);
             document.removeEventListener('keydown', handleUserAction);
         }
-    }, [navigate]);
+    }, [navigate, audioRef, playClickSound, setIsInTitleScreen]);
 
     return (<>
         <div className='main_title_container'>

@@ -2,7 +2,7 @@
 import './NewGameCard.css';
 
 // react
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // context
 import { useAudio } from '../../../context/AudioContext';
@@ -49,7 +49,7 @@ const NewGameCard = ({ setIsGlitchy }) => {
     }
 
     // This function is responsible for setting a interval of 500ms to blur an part of the new game image. It's also responsible for defining which part of the image will be blurred and how much time between each blur will occur.
-    const setupInterval = () => {
+    const setupInterval = useCallback(() => {
         if (intervalId) {
             clearInterval(intervalId);
         }
@@ -58,9 +58,9 @@ const NewGameCard = ({ setIsGlitchy }) => {
             const randomIndex = Math.floor(Math.random() * 10);
             setBlurImage(randomIndex + 1);
             setTimeout(() => setBlurImage(0), interval);
-        }
+        };
         setIntervalId(setInterval(intervalFunc, 500));
-    }
+    }, [intervalId]);
 
     // This use effect is responsible for calling the function to blur a part of the new card image and clearing the interval.
     useEffect(() => {
@@ -72,11 +72,15 @@ const NewGameCard = ({ setIsGlitchy }) => {
                 }
             }
         }
-    }, [blurImage]);
+    }, [blurImage, setupInterval, intervalId]);
 
     return (<>
         <div className='menu_card_new_game_images_container' ref={audioRef} onClick={handleClickNewCardDisabled}>
-            {imageParts.map((image, index) => <img className={`menu_card_new_game_image ${blurImage === (index + 1) ? 'menu_card_new_game_image_blur' : ''}`} key={index} src={image} alt={t('new_game_card_part')} loading='lazy'/>)}
+        {imageParts.map((image, index) => (
+                <img className={`menu_card_new_game_image ${blurImage === (index + 1) ? 'menu_card_new_game_image_blur' : ''}`}
+                    key={index} src={image}
+                    alt={t('new_game_card_part')} loading='lazy' />
+            ))}
         </div>
     </>);
 }

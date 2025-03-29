@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 
 export const DraggableCardPlay = ({ id, card, deckClickedTurn, setDeckClickedTurn }) => {
-    const { attributes, listeners, setNodeRef, transform } = useDraggable({ id, disabled: card.isDisabled });
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({ id, disabled: !deckClickedTurn || card.isDisabled });
     const { t } = useTranslation();
 
     const fontSize = useMemo(() => `calc(1.1rem - ${card.name.length / 3}px)`, [card.name.length]);
@@ -39,6 +39,12 @@ export const DraggableCardPlay = ({ id, card, deckClickedTurn, setDeckClickedTur
             return { backgroundImage: `url(${require('../../../assets/images/card/footer/footer.png')})` };
         }
     }, [card.imageType]);
+
+    const handleDragAttempt = () => {
+        if (!deckClickedTurn) {
+            alert(t('drag_not_allowed_alert'));
+        }
+    }
 
     const CardHeader = ({ fontSize }) => (
         <div className={`draggable_card_play_header`}>
@@ -66,7 +72,8 @@ export const DraggableCardPlay = ({ id, card, deckClickedTurn, setDeckClickedTur
         <div className={`draggable_card_play_container draggable_card_play_container_${card.isDisabled}`}
             ref={setNodeRef} style={style} 
             {...listeners} {...attributes} 
-            id={`draggable_card_play_container_${id}`}>
+            id={`draggable_card_play_container_${id}`}
+            onMouseDown={handleDragAttempt}>
             <CardHeader fontSize={fontSize} />
             <CardImage altText={t('card_image')} />
             <CardFooter />
