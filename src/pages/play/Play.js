@@ -122,7 +122,7 @@ const Play = () => {
             const cardKey = active.id;
     
             const updatedDroppableAreas = droppableAreas.map((area) => {
-                if (area.key === droppableAreaKey && area.cards.length === 0) {
+                if (area?.key === droppableAreaKey && area?.cards?.length === 0) {
                     const draggableCard = playerCards.find((card) => card.key === cardKey);
                     if (draggableCard) {
                         const row = Math.ceil(droppableAreaKey / 4);
@@ -184,7 +184,7 @@ const Play = () => {
         const startOfRow = (row - 1) * 4;
         return droppableAreas.slice(startOfRow, startOfRow + 4).map((area) => {
             // This arrow function makes all cards inside of the board disabled, that means the card can't be taken out of the board.
-            const cards = area.cards.map((area) => {
+            const cards = area?.cards?.map((area) => {
                 if (area && area.props && area.props.card) {
                     const card = area.props.card
                     const props = renderPropsCards(card, true);
@@ -260,7 +260,7 @@ const Play = () => {
     const moveUpcomingToEnemy = (areas) => {
         const newAreas = [...areas];
         for (let i = 0; i < 4; i++) {
-            if (newAreas[i].cards.length > 0) {
+            if (newAreas[i]?.cards?.length > 0) {
                 const targetIndex = i + 4;
                 if (newAreas[targetIndex].cards.length === 0) {
                     newAreas[targetIndex] = { ...newAreas[targetIndex], cards: newAreas[i].cards };
@@ -280,7 +280,7 @@ const Play = () => {
             const row = Math.ceil((index + 1) / 4);
     
             // Verifica se a carta está em uma linha válida para atacar
-            if (area.cards.length > 0) {
+            if (area?.cards?.length > 0) {
                 const attackerCard = { ...area.cards[0].props.card };
                 if ((row === 3 && isPlayerAttacking) || (row === 2 && !isPlayerAttacking)) {
                     let targetAreaIndex;
@@ -291,44 +291,20 @@ const Play = () => {
                         // Ataque inimigo para a linha do jogador
                         targetAreaIndex = index + 4;
                     }
-    
                     const targetArea = { ...newAreas[targetAreaIndex] }; 
                     if (targetArea?.cards?.length > 0) {
                         const defenderCard = { ...targetArea.cards[0].props.card }; 
                         const newHealth = defenderCard.health - attackerCard.power;
     
                         if (newHealth <= 0) {
-                            // A carta foi destruída, verificar se há uma carta na área "upcoming"
                             const upcomingAreaIndex = isPlayerAttacking ? targetAreaIndex - 4 : targetAreaIndex + 4;
-                            const upcomingArea = { ...newAreas[upcomingAreaIndex] };
-
-                            if (upcomingArea?.cards?.length > 0) {
-                                const upcomingCard = { ...upcomingArea.cards[0].props.card };
-                                const excessDamage = Math.abs(newHealth);
-                                const upcomingCardNewHealth = upcomingCard.health - excessDamage;
-
-                                if (upcomingCardNewHealth <= 0) {
-                                    upcomingArea.cards = [];
-                                } else {
-                                    upcomingCard.health = upcomingCardNewHealth;
-                                    upcomingArea.cards = [
-                                        <DraggableCardPlay
-                                            className="play_cards"
-                                            key={upcomingCard.key}
-                                            id={upcomingCard.key}
-                                            card={upcomingCard}
-                                            deckClickedTurn={deckClickedTurn}
-                                        />,
-                                    ];
-                                }
-                                newAreas[upcomingAreaIndex] = upcomingArea;
-                            }
+                            newAreas[upcomingAreaIndex] = damageToUpcomingCards(newAreas, newHealth, upcomingAreaIndex);
                             targetArea.cards = [];
                         } else {
                             defenderCard.health = newHealth;
                             targetArea.cards = [
                                 <DraggableCardPlay className="play_cards"
-                                    key={defenderCard.key} id={defenderCard.key}
+                                key={defenderCard.key} id={defenderCard.key}
                                     card={defenderCard} deckClickedTurn={deckClickedTurn}/>,
                             ];
                         }
@@ -338,16 +314,37 @@ const Play = () => {
                     }
                 }
             }
-        });
-
+        }); 
         // Se não houver alvo, aplica dano diretamente ao oponente
         if (isPlayerAttacking) {
             setPlayerPoints((prevPoints) => prevPoints + totalDirectDamage);
         } else {
             setEnemyPoints((prevPoints) => prevPoints + totalDirectDamage);
         }
-
         return newAreas;
+    }
+    
+    // A carta foi destruída, verificar se há uma carta na área "upcoming"
+    const damageToUpcomingCards = (newAreas, newHealth, upcomingAreaIndex) => {
+        const upcomingArea = { ...newAreas[upcomingAreaIndex] };
+    
+        if (upcomingArea?.cards?.length > 0) {
+            const upcomingCard = { ...upcomingArea.cards[0].props.card };
+            const excessDamage = Math.abs(newHealth);
+            const upcomingCardNewHealth = upcomingCard.health - excessDamage;
+            
+            if (upcomingCardNewHealth <= 0) {
+                upcomingArea.cards = [];
+            } else {
+                upcomingCard.health = upcomingCardNewHealth;
+                upcomingArea.cards = [
+                    <DraggableCardPlay className="play_cards"
+                    key={upcomingCard.key} id={upcomingCard.key}
+                    card={upcomingCard} deckClickedTurn={deckClickedTurn}/>,
+                ];
+            }
+            return upcomingArea;
+        }
     }
 
     useEffect(() => {
@@ -369,7 +366,7 @@ const Play = () => {
         let cardsAddedThisTurn = 0;
 
         for (let i = 0; i < 4 && cardsAddedThisTurn < maxCardsPerTurn; i++) {
-            if (newAreas[i].cards.length === 0) {
+            if (newAreas[i]?.cards?.length === 0) {
                 const canPlayCard = Math.random() >= 0.6; // Probabilidade de 40% de adicionar uma carta
                 if (canPlayCard) {
                     const randomEntry = cardEntries[Math.floor(Math.random() * cardEntries.length)];
