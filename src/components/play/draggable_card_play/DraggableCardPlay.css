@@ -32,22 +32,21 @@
     cursor: url('../../../assets/images/cursor/cursor_icons_3.png'), auto !important;
 }
 
-.draggable_card_play_header {
+.draggable_card_play_header,
+.draggable_card_play_footer {
     width: 100%;
-    height: 1.7rem;
     display: flex;
     justify-content: center;
-    align-items: center;
-    background: url("../../../assets/images/card/header/header.png");
     background-size: cover;
 }
 
+.draggable_card_play_header {
+    height: 1.7rem;
+}
+
 .draggable_card_play_footer {
-    width: 100%;
     height: 3.34rem;
-    display: flex;
     justify-content: space-between;
-    background-size: cover;
 }
 
 .draggable_card_play_container_false:hover > .draggable_card_play_footer {

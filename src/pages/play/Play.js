@@ -49,8 +49,8 @@ const Play = () => {
     const [deckSquirrelCards, setDeckSquirrelCards] = useState([]);
     const [deckClickedTurn, setDeckClickedTurn] = useState(false);
     const [droppableAreas, setDroppableAreas] = useState(Array.from({ length: 12 }, (_, index) => ({ key: index + 1, cards: [] })));
-    // const [playerPoints, setPlayerPoints] = useState(0);
-    // const [enemyPoints, setEnemyPoints] = useState(0);
+    const [playerPoints, setPlayerPoints] = useState(0);
+    const [enemyPoints, setEnemyPoints] = useState(0);
     // const [scaleTiltedSide, setScaleTiltedSide] = useState(0);
     // const [currentScaleImage, setCurrentScaleImage] = useState(scaleStatic);
     // const [styleScale, setStyleScale] = useState({backgroundImage: `url(${currentScaleImage})`});
@@ -113,6 +113,18 @@ const Play = () => {
         }, 100);
     }, [playFooterRef]);
 
+    // Função para verificar a condição de vitória
+    useEffect(() => {
+        const difference = Math.abs(playerPoints - enemyPoints);
+        if (difference >= 5) {
+            if (playerPoints > enemyPoints) {
+                alert("Você ganhou!");
+            } else {
+                alert("Você perdeu!");
+            }
+        }
+    }, [playerPoints, enemyPoints]);
+
     const handleDragStart = () => {}
 
     const handleDragEnd = (result) => {
@@ -123,19 +135,23 @@ const Play = () => {
     
             const updatedDroppableAreas = droppableAreas.map((area) => {
                 if (area.key === droppableAreaKey && area.cards.length === 0) {
-                    const draggableCard = (
-                        <DraggableCardPlay className="play_cards" 
-                            id={cardKey} key={cardKey} 
-                            card={{ ...playerCards.find((card) => card.key === cardKey), inDroppable: true }} 
-                            boardRef={boardRef}
-                        />
-                    );
-                    area.cards.push(draggableCard);
-                    setPlayerCards(playerCards.filter((card) => card.key !== cardKey));
+                    const draggableCard = playerCards.find((card) => card.key === cardKey);
+                    if (draggableCard) {
+                        const row = Math.ceil(droppableAreaKey / 4);
+                        const column = droppableAreaKey % 4 || 4;
+                        draggableCard.position = { row, column };
+                        area.cards.push(
+                            <DraggableCardPlay className="play_cards"
+                                id={cardKey} key={cardKey}
+                                card={{ ...draggableCard, inDroppable: true }}
+                                boardRef={boardRef}
+                            />
+                        );
+                        setPlayerCards(playerCards.filter((card) => card.key !== cardKey));
+                    }
                 }
                 return area;
             });
-    
             setDroppableAreas(updatedDroppableAreas);
         }
     }
@@ -163,8 +179,7 @@ const Play = () => {
         return {
             id: card.key,
             card: card,
-            deckClickedTurn: deckClickedTurn,
-            setDeckClickedTurn: setDeckClickedTurn
+            deckClickedTurn: deckClickedTurn
         }
     }
 
@@ -230,60 +245,129 @@ const Play = () => {
         );
     }
 
+    // Função principal que chama as outras funções separadas
     const playPassTurn = () => {
         if (deckClickedTurn) {
+            setDeckClickedTurn(false);
             setDroppableAreas((prevAreas) => {
-                const newAreas = [...prevAreas];
-                
-                // === MOVIMENTAÇÃO DE CARTAS EXISTENTES ===
-                for (let i = 0; i < 4; i++) {
-                    // Verifica se há carta no "upcoming" (primeira linha)
-                    if (newAreas[i].cards.length > 0) {
-                        // Índice correspondente na área "enemy"
-                        const targetIndex = i + 4;
-                        
-                        // Move a carta apenas se o destino estiver vazio
-                        if (newAreas[targetIndex].cards.length === 0) {
-                            newAreas[targetIndex] = {
-                                ...newAreas[targetIndex],
-                                cards: newAreas[i].cards,
-                            };
-                            newAreas[i] = { ...newAreas[i], cards: [] };
-                        }
-                    }
-                }
-                
-                // === GERAÇÃO DE NOVAS CARTAS ===
-                const maxCardsPerTurn = 2; // Limite máximo de cartas adicionadas por turno
-                const cardEntries = Object.entries(json);
-                let cardsAddedThisTurn = 0;
-                
-                for (let i = 0; i < 4 && cardsAddedThisTurn < maxCardsPerTurn; i++) {
-                // Verifica se a área está vazia antes de adicionar uma nova carta
-                    if (newAreas[i].cards.length === 0) {
-                        const canPlayCard = Math.random() >= 0.6; // Probabilidade de 40% de adicionar uma carta
-                        if (canPlayCard) {
-                            const randomEntry = cardEntries[Math.floor(Math.random() * cardEntries.length)];
-                            const randomCard = { ...randomEntry[1], key: uuidV4() };
-                            
-                            newAreas[i] = {
-                                ...newAreas[i],
-                                cards: [
-                                    <DraggableCardPlay className="play_cards"
-                                        key={randomCard.key} id={randomCard.key}
-                                        card={randomCard} boardRef={boardRef}/>,
-                                ],
-                            }
-                            cardsAddedThisTurn++;
-                        }
-                    }
-                }
+                let newAreas = [...prevAreas];
+
+                // Aplica os danos do jogador
+                console.log("Player atacando")
+                newAreas = applyDamage(newAreas, true);
+                // Move as cartas da área "upcoming" para a área "enemy"
+                newAreas = moveUpcomingToEnemy(newAreas);
+                // Aplica os danos do inimigo
+                console.log("Inimigo atacando")
+                newAreas = applyDamage(newAreas, false);
+                // Gera novas cartas na área "upcoming"
+                newAreas = generateNewCards(newAreas);
                 return newAreas;
             });
-            setDeckClickedTurn(false);
         } else {
             alert("Please, buy a card or a squirrel!");
         }
+    }
+
+    // Função para mover cartas da área "upcoming" para a área "enemy"
+    const moveUpcomingToEnemy = (areas) => {
+        const newAreas = [...areas];
+        for (let i = 0; i < 4; i++) {
+            if (newAreas[i].cards.length > 0) {
+                const targetIndex = i + 4;
+                if (newAreas[targetIndex].cards.length === 0) {
+                    newAreas[targetIndex] = { ...newAreas[targetIndex], cards: newAreas[i].cards };
+                    newAreas[i] = { ...newAreas[i], cards: [] };
+                }
+            }
+        }
+        return newAreas;
+    }
+
+    // Função para aplicar dano às cartas inimigas
+    const applyDamage = (areas, isPlayerAttacking) => {
+        const newAreas = areas.map((area) => ({ ...area }));
+        let totalDirectDamage = 0;
+
+        console.log(isPlayerAttacking + " - fora do for each")
+        newAreas.forEach((area, index) => {
+            console.log(isPlayerAttacking + " - dentro do for each")
+            const row = Math.ceil((index + 1) / 4);
+    
+            // Verifica se a carta está em uma linha válida para atacar
+            if (area.cards.length > 0) {
+                const attackerCard = { ...area.cards[0].props.card };
+                if ((row === 3 && isPlayerAttacking) || (row === 2 && !isPlayerAttacking)) {
+                    let targetAreaIndex;
+    
+                    if (isPlayerAttacking) {
+                        // Ataque do jogador para a linha inimiga
+                        targetAreaIndex = index - 4;
+                    } else {
+                        // Ataque inimigo para a linha do jogador
+                        targetAreaIndex = index + 4;
+                    }
+    
+                    const targetArea = { ...newAreas[targetAreaIndex] }; 
+                    if (targetArea?.cards?.length > 0) {
+                        const defenderCard = { ...targetArea.cards[0].props.card }; 
+                        const newHealth = defenderCard.health - attackerCard.power;
+    
+                        if (newHealth <= 0) {
+                            targetArea.cards = [];
+                        } else {
+                            defenderCard.health = newHealth;
+                            targetArea.cards = [
+                                <DraggableCardPlay className="play_cards"
+                                    key={defenderCard.key} id={defenderCard.key}
+                                    card={defenderCard} deckClickedTurn={deckClickedTurn}/>,
+                            ];
+                        }
+                        newAreas[targetAreaIndex] = targetArea;
+                    } else {
+                        totalDirectDamage += attackerCard.power;
+                        console.log(isPlayerAttacking + " - " + totalDirectDamage)
+                    }
+                }
+            }
+        });
+
+        // Se não houver alvo, aplica dano diretamente ao oponente
+        if (isPlayerAttacking) {
+            setPlayerPoints((prevPoints) => prevPoints + totalDirectDamage);
+        } else {
+            setEnemyPoints((prevPoints) => prevPoints + totalDirectDamage);
+        }
+        return newAreas;
+    }
+
+    // Função para gerar novas cartas na área "upcoming"
+    const generateNewCards = (areas) => {
+        const newAreas = [...areas];
+        const maxCardsPerTurn = 2; // Limite máximo de cartas adicionadas por turno
+        const cardEntries = Object.entries(json);
+        let cardsAddedThisTurn = 0;
+
+        for (let i = 0; i < 4 && cardsAddedThisTurn < maxCardsPerTurn; i++) {
+            if (newAreas[i].cards.length === 0) {
+                const canPlayCard = Math.random() >= 0.6; // Probabilidade de 40% de adicionar uma carta
+                if (canPlayCard) {
+                    const randomEntry = cardEntries[Math.floor(Math.random() * cardEntries.length)];
+                    const randomCard = { ...randomEntry[1], key: uuidV4() };
+
+                    newAreas[i] = {
+                        ...newAreas[i],
+                        cards: [
+                            <DraggableCardPlay className="play_cards"
+                                key={randomCard.key} id={randomCard.key}
+                                card={randomCard} boardRef={boardRef}/>,
+                        ],
+                    }
+                    cardsAddedThisTurn++;
+                }
+            }
+        }
+        return newAreas;
     }
 
     // const updateScaleImage = (playerPoints, enemyPoints) => {
@@ -307,16 +391,15 @@ const Play = () => {
     //     // setStyleScale({backgroundImage: `url(${newScaleImage})`});
     // }
 
-    // const addPointScale = (qtyPoints, isPlayerPoint) => {
-    //     const newPoints = qtyPoints;
-    //     isPlayerPoint ? setPlayerPoints(() => {
-    //         updateScaleImage(newPoints, enemyPoints);
-    //         return newPoints;
-    //     }) : setEnemyPoints(() => {
-    //         updateScaleImage(playerPoints, newPoints);
-    //         return newPoints;
-    //     });
-    // }
+
+    const renderPoints = () => {
+        return (
+            <div className="play_points" style={{color: "#fff"}}>
+                <div className="play_player_points">Player Points: {playerPoints}</div>
+                <div className="play_enemy_points">Enemy Points: {enemyPoints}</div>
+            </div>
+        );
+    }
 
     return (<>
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} autoScroll={false}>
@@ -343,11 +426,12 @@ const Play = () => {
                             <img className='play_plus_test' src={plusTest} alt={t('plus')} onClick={() => addPointScale(playerPoints + 1, true)}/>
                             </div> */}
                         <div className='play_change_turn'>
-                            <button onClick={playPassTurn}>Passar Turno</button>
+                            <button onClick={() => playPassTurn()}>Passar Turno</button>
                         </div>
                         <div className='play_board' ref={boardRef}>
                             {renderBoardArea()}
                         </div>
+                        {renderPoints()}
                     </div>
                     <div className='play_footer' ref={playFooterRef}>
                         <div className='play_player_cards'>
