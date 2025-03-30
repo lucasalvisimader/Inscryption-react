@@ -113,18 +113,6 @@ const Play = () => {
         }, 100);
     }, [playFooterRef]);
 
-    // Função para verificar a condição de vitória
-    useEffect(() => {
-        const difference = Math.abs(playerPoints - enemyPoints);
-        if (difference >= 5) {
-            if (playerPoints > enemyPoints) {
-                alert("Você ganhou!");
-            } else {
-                alert("Você perdeu!");
-            }
-        }
-    }, [playerPoints, enemyPoints]);
-
     const handleDragStart = () => {}
 
     const handleDragEnd = (result) => {
@@ -248,17 +236,16 @@ const Play = () => {
     // Função principal que chama as outras funções separadas
     const playPassTurn = () => {
         if (deckClickedTurn) {
+            console.log("teste")
             setDeckClickedTurn(false);
             setDroppableAreas((prevAreas) => {
                 let newAreas = [...prevAreas];
 
                 // Aplica os danos do jogador
-                console.log("Player atacando")
                 newAreas = applyDamage(newAreas, true);
                 // Move as cartas da área "upcoming" para a área "enemy"
                 newAreas = moveUpcomingToEnemy(newAreas);
                 // Aplica os danos do inimigo
-                console.log("Inimigo atacando")
                 newAreas = applyDamage(newAreas, false);
                 // Gera novas cartas na área "upcoming"
                 newAreas = generateNewCards(newAreas);
@@ -289,9 +276,7 @@ const Play = () => {
         const newAreas = areas.map((area) => ({ ...area }));
         let totalDirectDamage = 0;
 
-        console.log(isPlayerAttacking + " - fora do for each")
         newAreas.forEach((area, index) => {
-            console.log(isPlayerAttacking + " - dentro do for each")
             const row = Math.ceil((index + 1) / 4);
     
             // Verifica se a carta está em uma linha válida para atacar
@@ -299,7 +284,6 @@ const Play = () => {
                 const attackerCard = { ...area.cards[0].props.card };
                 if ((row === 3 && isPlayerAttacking) || (row === 2 && !isPlayerAttacking)) {
                     let targetAreaIndex;
-    
                     if (isPlayerAttacking) {
                         // Ataque do jogador para a linha inimiga
                         targetAreaIndex = index - 4;
@@ -325,8 +309,7 @@ const Play = () => {
                         }
                         newAreas[targetAreaIndex] = targetArea;
                     } else {
-                        totalDirectDamage += attackerCard.power;
-                        console.log(isPlayerAttacking + " - " + totalDirectDamage)
+                        totalDirectDamage += (attackerCard.power / 2);
                     }
                 }
             }
@@ -338,8 +321,20 @@ const Play = () => {
         } else {
             setEnemyPoints((prevPoints) => prevPoints + totalDirectDamage);
         }
+
         return newAreas;
     }
+
+    useEffect(() => {
+        const difference = Math.abs(playerPoints - enemyPoints);
+        if (difference >= 5) {
+            if (playerPoints > enemyPoints) {
+                alert("Você ganhou!");
+            } else {
+                alert("Você perdeu!");
+            }
+        }
+    }, [playerPoints, enemyPoints])
 
     // Função para gerar novas cartas na área "upcoming"
     const generateNewCards = (areas) => {
