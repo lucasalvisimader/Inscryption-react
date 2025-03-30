@@ -298,6 +298,31 @@ const Play = () => {
                         const newHealth = defenderCard.health - attackerCard.power;
     
                         if (newHealth <= 0) {
+                            // A carta foi destruída, verificar se há uma carta na área "upcoming"
+                            const upcomingAreaIndex = isPlayerAttacking ? targetAreaIndex - 4 : targetAreaIndex + 4;
+                            const upcomingArea = { ...newAreas[upcomingAreaIndex] };
+
+                            if (upcomingArea?.cards?.length > 0) {
+                                const upcomingCard = { ...upcomingArea.cards[0].props.card };
+                                const excessDamage = Math.abs(newHealth);
+                                const upcomingCardNewHealth = upcomingCard.health - excessDamage;
+
+                                if (upcomingCardNewHealth <= 0) {
+                                    upcomingArea.cards = [];
+                                } else {
+                                    upcomingCard.health = upcomingCardNewHealth;
+                                    upcomingArea.cards = [
+                                        <DraggableCardPlay
+                                            className="play_cards"
+                                            key={upcomingCard.key}
+                                            id={upcomingCard.key}
+                                            card={upcomingCard}
+                                            deckClickedTurn={deckClickedTurn}
+                                        />,
+                                    ];
+                                }
+                                newAreas[upcomingAreaIndex] = upcomingArea;
+                            }
                             targetArea.cards = [];
                         } else {
                             defenderCard.health = newHealth;
