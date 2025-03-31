@@ -310,7 +310,7 @@ const Play = () => {
                         }
                         newAreas[targetAreaIndex] = targetArea;
                     } else {
-                        totalDirectDamage += (attackerCard.power / 2);
+                        totalDirectDamage += (attackerCard.power);
                     }
                 }
             }
