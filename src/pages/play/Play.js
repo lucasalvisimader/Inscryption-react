@@ -91,6 +91,11 @@ const Play = () => {
             }
         }
         fetchCards();
+        setDroppableAreas((prevAreas) => {
+            let newAreas = [...prevAreas];
+            newAreas = generateNewCards(newAreas);
+            return newAreas;
+        })
     }, []);
 
     // This is an use effect made to used to put an unique key in each one of the cards. It's also used to separate in different variables current player cards and deck cards.
@@ -236,7 +241,6 @@ const Play = () => {
     // Função principal que chama as outras funções separadas
     const playPassTurn = () => {
         if (deckClickedTurn) {
-            console.log("teste")
             setDeckClickedTurn(false);
             setDroppableAreas((prevAreas) => {
                 let newAreas = [...prevAreas];
